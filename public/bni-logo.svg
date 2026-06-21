@@ -1,0 +1,13 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="300" height="60" viewBox="0 0 300 60">
+  <rect width="300" height="60" fill="white" rx="0"/>
+  <!-- Orange rounded square -->
+  <rect x="4" y="4" width="52" height="52" rx="6" fill="#F26522"/>
+  <!-- White symbol inside orange square -->
+  <g transform="translate(12,10)">
+    <!-- BNI interlocking loops - simplified but accurate -->
+    <path d="M18 8 C8 8, 4 18, 10 26 C16 34, 24 26, 18 18 C12 10, 28 10, 22 18 C16 26, 34 26, 28 18 C22 10, 32 4, 32 4" 
+          stroke="white" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- BNI text in dark teal serif -->
+  <text x="68" y="44" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="42" fill="#005F6A" letter-spacing="2">BNI</text>
+</svg>

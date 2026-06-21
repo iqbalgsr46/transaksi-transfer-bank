@@ -1,0 +1,13 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="260" height="70" viewBox="0 0 260 70">
+  <!-- BNI Orange Square Icon with rounded corners -->
+  <rect x="2" y="2" width="66" height="66" rx="6" fill="#F26522"/>
+  <!-- White square for symbol area -->
+  <rect x="10" y="8" width="50" height="38" rx="2" fill="white"/>
+  <!-- BNI Symbol simplified -->
+  <g transform="translate(10,8)">
+    <path d="M10 28 C10 15, 25 8, 25 8 C25 8, 18 20, 18 28 C18 36, 25 43, 25 43" stroke="#F26522" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M32 8 C32 8, 47 15, 47 28 C47 36, 40 43, 32 43 M32 43 C32 43, 25 36, 32 28 C40 20, 32 8, 32 8" stroke="#F26522" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- BNI text -->
+  <text x="80" y="54" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="52" fill="#006A6A" letter-spacing="3">BNI</text>
+</svg>
