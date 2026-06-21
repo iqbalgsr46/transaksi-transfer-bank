@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     description: "vt.tiktok.com",
     images: ["/LOGO-TIKTOK.png"],
   },
-  metadataBase: new URL("https://restaurants-fuel-appliance-estimate.trycloudflare.com"),
+  metadataBase: new URL("https://breakdown-particularly-drums-suggesting.trycloudflare.com"),
 };
 
 export default function RootLayout({
