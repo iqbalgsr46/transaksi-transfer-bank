@@ -309,8 +309,9 @@ class Engine:
         env = os.environ.copy()
         env["NEXT_TELEMETRY_DISABLED"] = "1"
         env["NODE_OPTIONS"] = "--max-old-space-size=4096"
-        # On Android, Turbopack (default in Next.js 16) is NOT supported on ARM
-        # Temporarily downgrade to Next.js 14 which uses Webpack instead
+        # On Android, Turbopack (default in Next.js 16 build) is NOT supported on ARM
+        # Downgrade to Next.js 15 which uses Webpack for build (Turbopack only for dev)
+        # Next.js 15 also supports React 19 and Tailwind v4, so minimal changes needed
         did_downgrade = False
         pkg_json = os.path.join(self.app_dir, "package.json")
         pkg_bak = pkg_json + ".bak"
@@ -319,15 +320,26 @@ class Engine:
                 with open(pkg_json, "r") as f:
                     pkg_data = json.load(f)
                 next_ver = pkg_data.get("dependencies", {}).get("next", "")
-                if next_ver and not next_ver.startswith("14"):
-                    print(f"{C.YLW}  Android: downgrading Next.js to v14 (Turbopack not supported on ARM)...{C.RST}")
+                if next_ver and not next_ver.startswith("15"):
+                    print(f"{C.YLW}  Android: downgrading Next.js to v15 (Turbopack v16 not supported on ARM)...{C.RST}")
                     shutil.copy2(pkg_json, pkg_bak)
-                    pkg_data["dependencies"]["next"] = "14.2.29"
+                    pkg_data["dependencies"]["next"] = "15.3.3"
+                    dev_deps = pkg_data.get("devDependencies", {})
+                    if "eslint-config-next" in dev_deps:
+                        dev_deps["eslint-config-next"] = "15.3.3"
                     with open(pkg_json, "w") as f:
                         json.dump(pkg_data, f, indent=2)
+                    # Must delete node_modules and package-lock.json for clean reinstall
+                    print(f"{C.DIM}  Cleaning node_modules for fresh install...{C.RST}")
+                    nm_dir = os.path.join(self.app_dir, "node_modules")
+                    lock_file = os.path.join(self.app_dir, "package-lock.json")
+                    if os.path.exists(nm_dir):
+                        shutil.rmtree(nm_dir, ignore_errors=True)
+                    if os.path.exists(lock_file):
+                        os.remove(lock_file)
                     subprocess.run(["npm", "install"], cwd=self.app_dir, shell=IS_WIN, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     did_downgrade = True
-                    print(f"{C.GRN}  Next.js v14.2.29 ready for Android build{C.RST}")
+                    print(f"{C.GRN}  Next.js v15.3.3 ready for Android build (uses Webpack){C.RST}")
         except Exception as e:
             print(f"{C.RED}  Failed to downgrade Next.js: {e}{C.RST}")
         self.building = True
