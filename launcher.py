@@ -312,7 +312,7 @@ class Engine:
         nm = os.path.join(self.app_dir, "node_modules")
         if not os.path.exists(nm):
             print(f"{C.YLW}  📦 Installing dependencies...{C.RST}")
-            subprocess.run(["npm", "install"], cwd=self.app_dir, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["npm", "install"], cwd=self.app_dir, shell=IS_WIN, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         env = os.environ.copy()
         env["NEXT_TELEMETRY_DISABLED"] = "1"
         env["NODE_OPTIONS"] = "--max-old-space-size=4096"
@@ -327,7 +327,9 @@ class Engine:
                 i += 1
         t = threading.Thread(target=spin, daemon=True)
         t.start()
-        r = subprocess.run(["npx", "next", "build"], cwd=self.app_dir, env=env, shell=True, capture_output=True, text=True, timeout=120)
+        # Android needs much more time to build (600s vs 120s on PC)
+        build_timeout = 600 if IS_ANDROID else 120
+        r = subprocess.run(["npx", "next", "build"], cwd=self.app_dir, env=env, shell=IS_WIN, capture_output=True, text=True, timeout=build_timeout)
         self.building = False
         time.sleep(0.2)
         sys.stdout.write("\r" + " " * 40 + "\r")
