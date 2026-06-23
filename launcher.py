@@ -73,26 +73,20 @@ def kill_all():
             subprocess.run(["pkill", "-9", "-f", name], capture_output=True)
 
 def _find_cloudflared_path():
+    p = shutil.which("cloudflared")
+    if p:
+        return p
     if IS_WIN:
-        try:
-            r = subprocess.run(["where", "cloudflared"], capture_output=True, text=True, timeout=5, **({"creationflags": subprocess.CREATE_NO_WINDOW} if hasattr(subprocess, "CREATE_NO_WINDOW") else {}))
-            if r.returncode == 0 and r.stdout.strip():
-                return r.stdout.strip().split("\n")[0].strip()
-        except Exception:
-            pass
-        for p in [r"C:\Program Files (x86)\cloudflared\cloudflared.exe", r"C:\Program Files\cloudflared\cloudflared.exe"]:
-            if os.path.exists(p):
-                return p
+        for path in [r"C:\Program Files (x86)\cloudflared\cloudflared.exe", r"C:\Program Files\cloudflared\cloudflared.exe"]:
+            if os.path.exists(path):
+                return path
     else:
-        try:
-            r = subprocess.run(["which", "cloudflared"], capture_output=True, text=True, timeout=5)
-            if r.returncode == 0 and r.stdout.strip():
-                return r.stdout.strip().split("\n")[0].strip()
-        except Exception:
-            pass
-        for p in ["/usr/bin/cloudflared", "/usr/local/bin/cloudflared"]:
-            if os.path.exists(p):
-                return p
+        termux_path = "/data/data/com.termux/files/usr/bin/cloudflared"
+        if os.path.exists(termux_path):
+            return termux_path
+        for path in ["/usr/bin/cloudflared", "/usr/local/bin/cloudflared"]:
+            if os.path.exists(path):
+                return path
     return None
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
