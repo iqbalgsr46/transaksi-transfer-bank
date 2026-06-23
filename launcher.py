@@ -409,9 +409,14 @@ class Engine:
             time.sleep(2)
             try:
                 with open(log) as f:
-                    m = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", f.read())
-                    if m:
-                        self.url = m.group(0)
+                    content = f.read()
+                    all_urls = re.findall(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", content)
+                    # Get unique URLs, filter api.trycloudflare.com, prefer longer subdomains
+                    unique_urls = list(set(all_urls))
+                    tunnel_urls = [u for u in unique_urls if "api" not in u.lower()]
+                    if tunnel_urls:
+                        # Prefer URL with longer subdomain (more likely to be actual tunnel)
+                        self.url = max(tunnel_urls, key=lambda u: len(u.split(".")[0]))
                         print(f"{C.GRN}  Cloudflare Tunnel ready! (No warning page!){C.RST}")
                         return self.url
             except Exception:
@@ -552,8 +557,15 @@ class Engine:
         if os.path.exists(log):
             try:
                 with open(log) as f:
-                    m = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", f.read())
-                    if m: url = m.group(0); self.url = url
+                    content = f.read()
+                    all_urls = re.findall(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", content)
+                    # Get unique URLs, filter api.trycloudflare.com, prefer longer subdomains
+                    unique_urls = list(set(all_urls))
+                    tunnel_urls = [u for u in unique_urls if "api" not in u.lower()]
+                    if tunnel_urls:
+                        # Prefer URL with longer subdomain (more likely to be actual tunnel)
+                        url = max(tunnel_urls, key=lambda u: len(u.split(".")[0]))
+                        self.url = url
             except: pass
         if url:
             print(f"  Tunnel       : BERJALAN (Cloudflare - Tanpa warning page)")
