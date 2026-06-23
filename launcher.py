@@ -405,11 +405,18 @@ class Engine:
         print(f"{C.CYN}  Starting Cloudflare Tunnel...{C.RST}")
         log = os.path.join(self.app_dir, "tunnel.log")
         self.tunnel_proc = subprocess.Popen([cf, "tunnel", "--url", f"http://localhost:{self.app_port}"], stdout=open(log, "w"), stderr=subprocess.STDOUT, **self._nw())
-        for _ in range(30):
+        ssl_error_detected = False
+        for i in range(30):
             time.sleep(2)
             try:
                 with open(log) as f:
                     content = f.read()
+                    # Check for SSL certificate errors (common in Termux/Android)
+                    if "x509" in content or "certificate" in content.lower() and "unknown authority" in content:
+                        ssl_error_detected = True
+                        print(f"{C.YLW}  Cloudflared SSL error detected (Termux/Android issue){C.RST}")
+                        self.kill_tunnel()
+                        return self._start_ngrok_fallback()
                     all_urls = re.findall(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", content)
                     # Get unique URLs, filter api.trycloudflare.com, prefer longer subdomains
                     unique_urls = list(set(all_urls))
@@ -421,7 +428,8 @@ class Engine:
                         return self.url
             except Exception:
                 pass
-        print(f"{C.YLW}  Could not get tunnel URL{C.RST}")
+        if not ssl_error_detected:
+            print(f"{C.YLW}  Could not get tunnel URL{C.RST}")
         return None
 
     def _start_ngrok_fallback(self):
